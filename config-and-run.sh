@@ -25,7 +25,7 @@ if [ ! -z "$MAX_SERVERS" ]; then
   cat /opt/zookeeper/conf/zoo.cfg
 
   # Persists the ID of the current instance of Zookeeper
-  echo ${SERVER_ID} > /opt/zookeeper/data/myid
+  echo ${serverlist[$(hostname)]} > /opt/zookeeper/data/myid
   else
           echo "Starting up in standalone mode"
 fi
