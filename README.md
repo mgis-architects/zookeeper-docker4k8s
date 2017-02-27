@@ -1,75 +1,117 @@
-Fabric8 - ZooKeeper Docker Image
+ZooKeeper Docker Image for k8s
 ================================
 
-A ZooKeeper Docker Image for use with Kubernetes.
-
-The image supports the following ZooKeeper modes:
-
-* Standalone
-* Clustered
-
-# Standalone Mode
-To start the image in standalone mode you can simply use:
-
-    docker run fabric8/zookeeper
+A ZooKeeper Docker Image for use with Kubernetes (based on modified fabric8 zookeeper image).
 
 # Clustered Mode
 To start the image in clustered mode you need to specify a couple of environment variables for the container.
 
-| Environment Variable                          | Description                           |
-| --------------------------------------------- | --------------------------------------|
-| SERVER_ID                                     | The id of the  server                 |
-| MAX_SERVERS                                   | The number of servers in the ensemble |
+| Environment Variable                          | Description                                    |
+| --------------------------------------------- | -----------------------------------------------|
+| NAMESPACE                                     | namespace of the POD matching the service name |
+| MAX_SERVERS                                   | The number of servers in the ensemble          |
 
 
 Each container started with both of the above variables will use the following env variable setup:
 
-    server.1=zookeeper-1:2888:3888
-    server.2=zookeeper-2:2888:3888
-    server.3=zookeeper-3:2888:3888
+    server.1=zookeeper-1.<NAMESPACE>:2888:3888
+    server.2=zookeeper-2.<NAMESPACE>:2888:3888
+    server.3=zookeeper-3.<NAMESPACE>:2888:3888
     ...
     server.N=zookeeper-N:2888:3888
 
-Ensuring that zookeeper-1, zookeeper-2 ... zookeeper-N can be resolved is beyond the scope of this image.
-You can use DNS, or Kubernetes services, etc depending on your environment (see below).
+Image uses KubeDNS service to resolve zookeper host names.
 
 ## Inside Kubernetes
 
 Inside Kubernetes you can use a pod setup that looks like:
 
-    {
-      "kind": "Pod",
-      "apiVersion": "v1beta3",
-      "metadata": {
-        "name": "zookeeper-1",
-        "labels": {
-          "name": "zookeeper",
-          "server-id": "1"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "server",
-            "image": "fabric8/zookeeper",
-            "env":[
-              { "name": "SERVER_ID", "value": "1" },
-              { "name": "MAX_SERVERS", "value": "3" }
-            ],
-            "ports":[
-              {
-                "containerPort": 2181
-              },
-              {
-                "containerPort": 2888
-              },
-              {
-                "containerPort": 3888
-              }
-            ]
-          }
-        ]
-      }
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zookeeper-1
+  labels:
+    name: zookeeper-po
+spec:
+  hostname: zookeeper-1
+  subdomain: zookeeper
+  containers:
+  - name: server
+    image: zookeeper
+    env:
+    - name: NAMESPACE
+      value: "zookeeper"
+    - name: MAX_SERVERS
+      value: "3"
+    ports:
+    - containerPort: 2181
+    - containerPort: 2888
+    - containerPort: 3888
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zookeeper-2
+  labels:
+    name: zookeeper-po
+spec:
+  hostname: zookeeper-2
+  subdomain: zookeeper
+  containers:
+  - name: server
+    image: zookeeper
+    env:
+    - name: NAMESPACE
+      value: "zookeeper"
+    - name: MAX_SERVERS
+      value: "3"
+    ports:
+    - containerPort: 2181
+    - containerPort: 2888
+    - containerPort: 3888
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zookeeper-3
+  labels:
+    name: zookeeper-po
+spec:
+  hostname: zookeeper-3
+  subdomain: zookeeper
+  containers:
+  - name: server
+    image: zookeeper
+    env:
+    - name: NAMESPACE
+      value: "zookeeper"
+    - name: MAX_SERVERS
+      value: "3"
+    ports:
+    - containerPort: 2181
+    - containerPort: 2888
+    - containerPort: 3888
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+spec:
+  selector:
+    name: zookeeper-po
+  clusterIP: None
+  ports:
+    - name: client
+      port: 2181
+      targetPort: 2181
+    - name: followers
+      port: 2888
+      targetPort: 2888
+    - name: election
+      port: 3888
+      targetPort: 3888
+```
 
-In the example above we are creating a pod that creates a container using this image. The container is configured to use the environment variable required for a clustered setup.
+The container is configured to use the environment variable required for a clustered setup.
 Last but not least pod is carefully named (as zookeeper-${SERVER_ID}) so that the other zookeeper servers can easily find it by hostname.

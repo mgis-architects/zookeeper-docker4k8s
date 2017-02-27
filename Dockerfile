@@ -1,6 +1,6 @@
 FROM jboss/base-jdk:7
 
-MAINTAINER iocanel@gmail.com
+MAINTAINER adubnik@gmail.com
 
 USER root
 
