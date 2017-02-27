@@ -30,3 +30,4 @@ if [ ! -z "$MAX_SERVERS" ]; then
           echo "Starting up in standalone mode"
 fi
 
+exec /opt/zookeeper/bin/zkServer.sh start-foreground
